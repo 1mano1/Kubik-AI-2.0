@@ -44,7 +44,7 @@ def init_render(engine='CYCLES', resolution=512, geo_mode=False):
     
     bpy.context.scene.cycles.device = 'GPU'
     bpy.context.scene.cycles.samples = 128 if not geo_mode else 1
-    bpy.context.scene.cycles.filter_type = 'BOX'
+    # bpy.context.scene.cycles.filter_type = 'BOX'
     bpy.context.scene.cycles.filter_width = 1
     bpy.context.scene.cycles.diffuse_bounces = 1
     bpy.context.scene.cycles.glossy_bounces = 1

@@ -3,6 +3,7 @@ import sys
 import json
 import glob
 import argparse
+import importlib
 from easydict import EasyDict as edict
 
 import torch
@@ -10,8 +11,17 @@ import torch.multiprocessing as mp
 import numpy as np
 import random
 
-from trellis import models, datasets, trainers
 from trellis.utils.dist_utils import setup_dist
+
+
+def import_class(name: str):
+    """
+    Import a class from a string.
+    e.g. 'trellis.models.MyModel' -> <class 'trellis.models.MyModel'>
+    """
+    module_name, class_name = name.rsplit('.', 1)
+    module = importlib.import_module(module_name)
+    return getattr(module, class_name)
 
 
 def find_ckpt(cfg):
@@ -67,11 +77,13 @@ def main(local_rank, cfg):
     setup_rng(rank)
 
     # Load data
-    dataset = getattr(datasets, cfg.dataset.name)(cfg.data_dir, **cfg.dataset.args)
+    dataset_class = import_class(cfg.dataset.name)
+    data_roots = [path.strip() for path in cfg.data_dir.split(',')]
+    dataset = dataset_class(data_roots, **cfg.dataset.args)
 
     # Build model
     model_dict = {
-        name: getattr(models, model.name)(**model.args).cuda()
+        name: import_class(model.name)(**model.args).cuda()
         for name, model in cfg.models.items()
     }
 
@@ -84,7 +96,8 @@ def main(local_rank, cfg):
                 print(model_summary, file=fp)
 
     # Build trainer
-    trainer = getattr(trainers, cfg.trainer.name)(model_dict, dataset, **cfg.trainer.args, output_dir=cfg.output_dir, load_dir=cfg.load_dir, step=cfg.load_ckpt)
+    trainer_class = import_class(cfg.trainer.name)
+    trainer = trainer_class(model_dict, dataset, **cfg.trainer.args, output_dir=cfg.output_dir, load_dir=cfg.load_dir, step=cfg.load_ckpt)
 
     # Train
     if not cfg.tryrun:
