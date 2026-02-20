@@ -1,9 +1,8 @@
 # --- CUDA-Enabled PyTorch ---
 # The following torch and torchvision versions are for a specific CUDA version.
-# For Kaggle or other environments, you MUST install the correct PyTorch version manually first.
-# See https://pytorch.org/get-started/locally/
-torch==2.10.0+cu126
-torchvision==0.25.0+cu126
+# For Kaggle or other environments, you SHOULD use the pre-installed PyTorch.
+# torch==2.10.0+cu126
+# torchvision==0.25.0+cu126
 
 # --- Core Dependencies ---
 easydict==1.13
