@@ -12,14 +12,12 @@ Kubik AI 2.0 is an advanced 3D generation AI designed for high-fidelity geometry
 ## Project Structure
 
 - `KubikAI/`: Core package containing models, datasets, and trainers.
+  - `IMG-TEST/`: Contains test images for inference.
   - `models/`: SDF-VAE and Cross-Attention Flow implementations.
   - `datasets/`: SDF and Latent dataset handlers.
   - `trainers/`: Specialized training logic for each model stage.
   - `configs/`: Training and model configurations.
-  - `logo/`: Project branding assets.
-- `train_vae.py`: Entry point for training the SDF-VAE.
-- `train_flow.py`: Entry point for training the Flow model.
-- `preprocess_data.py`: Multi-view rendering and SDF generation pipeline.
+- `train_*.py`: Entry points for training different model stages.
 - `requirements.txt`: Project dependencies.
 
 ## Installation
@@ -28,14 +26,32 @@ Kubik AI 2.0 is an advanced 3D generation AI designed for high-fidelity geometry
 pip install -r requirements.txt
 ```
 
-## Getting Started
+## Running Inference on Kaggle
 
-1. **Pre-process Data:**
-   Use `preprocess_data.py` to prepare your 3D models.
-2. **Train VAE:**
-   Run `train_vae.py` with the appropriate config.
-3. **Train Flow Model:**
-   Run `train_flow.py` to train the generation stage.
+This project is optimized for execution on Kaggle.
+
+1.  **Prepare Datasets:**
+    -   Upload your trained VAE checkpoint (`vae_step0050000.pt`) to a Kaggle Dataset.
+    -   Upload your trained Flow Model checkpoint (`flow_step0045000.pt`) to another Kaggle Dataset.
+
+2.  **Setup Notebook:**
+    -   Create a new Kaggle Notebook.
+    -   Add your two checkpoint datasets as input.
+    -   Clone this repository: `!git clone https://github.com/1mano1/Kubik-AI-2.0.git`
+    -   Navigate into the repo: `%cd Kubik-AI-2.0`
+    -   Install dependencies: `!pip install -r requirements.txt`
+
+3.  **Run Inference:**
+    -   The final command will depend on the exact paths assigned by Kaggle to your datasets. After discovering the paths using `!ls /kaggle/input/`, the command should look like this:
+
+    ```bash
+    !python KubikAI/inference.py \
+    --image KubikAI/IMG-TEST/test.jpg \
+    --output /kaggle/working/generated_model.obj \
+    --vae_ckpt /kaggle/input/datasets/imanolr11/kubikai-weights/vae_step0050000.pt \
+    --flow_ckpt /kaggle/input/datasets/imanolr11/kubikai-flow-weights/flow_step0045000.pt \
+    --config KubikAI/configs/kubikai_flow_v1.json
+    ```
 
 ## Credits and Acknowledgments
 
