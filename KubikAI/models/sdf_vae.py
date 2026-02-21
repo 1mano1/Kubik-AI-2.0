@@ -18,12 +18,17 @@ class SinusoidalEmbedding(nn.Module):
 
 # Basic MLP class
 class MLP(nn.Module):
-    def __init__(self, in_dim, out_dim, hidden_layers, hidden_dim):
+    def __init__(self, in_dim, out_dim, hidden_layers, hidden_dim, final_activation=None):
         super().__init__()
         layers = [nn.Linear(in_dim, hidden_dim), nn.ReLU()]
         for _ in range(hidden_layers):
             layers.extend([nn.Linear(hidden_dim, hidden_dim), nn.ReLU()])
         layers.append(nn.Linear(hidden_dim, out_dim))
+        
+        # Add the final activation if specified
+        if final_activation:
+            layers.append(final_activation())
+            
         self.net = nn.Sequential(*layers)
 
     def forward(self, x):
@@ -96,11 +101,13 @@ class SdfDecoder(nn.Module):
             nn.Conv3d(latent_dim, latent_dim, kernel_size=3, padding=1),
             nn.ReLU(),
         )
+        # CRITICAL FIX: Add a Tanh activation to the final layer to bound the output to [-1, 1]
         self.net = MLP(
             in_dim=latent_dim + (point_dim * emb_dim),
             out_dim=1,
             hidden_layers=8,
-            hidden_dim=512
+            hidden_dim=512,
+            final_activation=nn.Tanh
         )
 
     def forward(self, z, points):
@@ -111,23 +118,19 @@ class SdfDecoder(nn.Module):
         z_processed = self.grid_processor(z) # (B, latent_dim, R, R, R)
 
         # Sample the latent grid at the query point positions
-        # grid_sample expects coordinates in the range [-1, 1]
-        # points are assumed to be in the range [-1, 1] already
-        # We need to reshape points to (B, N, 1, 1, 3) for grid_sample
         grid_query = points.view(B, N, 1, 1, 3)
-        # grid_sample: (B, C, R, R, R) x (B, N, 1, 1, 3) -> (B, C, N, 1, 1)
         z_sampled = F.grid_sample(z_processed, grid_query, align_corners=True)
         z_sampled = z_sampled.view(B, -1, N).permute(0, 2, 1) # (B, N, latent_dim)
 
         # Get positional embeddings for query points
-        pos_embed = self.pos_emb(points) # (B, N, 3, emb_dim)
-        pos_embed = pos_embed.view(B, N, -1) # Reshape to (B, N, 3 * emb_dim)
+        pos_embed = self.pos_emb(points)
+        pos_embed = pos_embed.view(B, N, -1)
 
         # Concatenate latent features and positional embeddings
-        z_pos_cat = torch.cat([z_sampled, pos_embed], dim=-1) # (B, N, latent_dim + (3 * emb_dim))
+        z_pos_cat = torch.cat([z_sampled, pos_embed], dim=-1)
 
         # Predict SDF values
-        sdf_pred = self.net(z_pos_cat) # (B, N, 1)
+        sdf_pred = self.net(z_pos_cat)
 
         return sdf_pred
 
